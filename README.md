@@ -1,3 +1,4 @@
 # ncx
 
-A description of this package.
+NetCDF command-line tool. 
+(c) 2023 Gregor Feigel.
