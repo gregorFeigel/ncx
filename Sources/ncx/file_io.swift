@@ -297,9 +297,10 @@ class FileIO {
         return new
     }
     
+    // MARK: Drop
     func drop(var_names: [String], force: Bool) throws {
         if urls.count != 2  { print("missing input or output file."); exit(1) }
-        if urls[0] == urls[1] && force == false { print("Can not write to output to input file. Use -f to override input file"); exit(1) }
+        if urls[0] == urls[1] && force == false { print("Cannot write output to input file. Use -f to override input file"); exit(1) }
         let file = try NetCDF.open(path: urls[0].path, allowUpdate: false)
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try copy_file(from: file!, to: tempURL, exclude: var_names)
