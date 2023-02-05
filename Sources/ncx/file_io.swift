@@ -160,7 +160,7 @@ class FileIO {
                 case .some(.float): break
                 case .some(.byte):  break
                 case .some(.char):
-                    var x: [UInt8] = try n.read() ?? []
+                    let x: [UInt8] = try n.read() ?? []
                     return String(data: Data(x), encoding: .utf8) ?? "err"
                 case .some(.short):  break
                 case .some(.int32):  break
