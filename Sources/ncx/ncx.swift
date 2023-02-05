@@ -18,20 +18,46 @@ import ArgumentParser
     var inputFile: [URL] = []
     
     @Flag() var dump: Bool = false
-    
     @Flag() var gdump: Bool = false
-    
+    @Flag() var convert_type: Bool = false
+
     @Option(help: "Reference date. Timeinterval [sec] since <date>.",
             transform: { $0.toDate(format: "yyyy-MM-dd'T'HH:mm:ssZ") ?? .init(timeIntervalSince1970: 0) }   )
             var date: Date = .init(timeIntervalSince1970: 0)
     
     @Option(help: "Varibale to plot.") var var_name: String = ""
- 
+    
+    @Option(help: "Varibale type to convert from.") var from_type: NetCDF_Values = .float
+    @Option(help: "Varibale type to convert to.") var to_type: NetCDF_Values = .float
+    
+    var files: [URL] {
+        get throws {
+            let data = try FileHandle.standardInput.readToEnd()
+            let str = String(data: data!, encoding: .utf8)
+            return (str?.components(separatedBy: [" ", "\n"]).compactMap({ str -> URL in
+                return URL(fileURLWithPath: str)
+            }))!
+        }
+    }
+
 }
 
 extension NCX_Tool {
-    func run() async throws {
-        if dump { try await FileIO(urls: inputFile, date: date).dump() }
-        else if gdump { try await FileIO(urls: inputFile, date: date).gplot(name: var_name) }
+    mutating func run() async throws {
+        // read from pipe if no data is enterd
+        if inputFile.isEmpty { inputFile = try files }
+        
+        let file = FileIO(urls: inputFile, date: date)
+        if dump { try await file.dump() }
+        else if gdump { try await file.gplot(name: var_name) }
+        else if convert_type { await file.change_variable(name: var_name, format_is: from_type, format_to: to_type) }
     }
+}
+
+enum NetCDF_Values: String, Codable, ExpressibleByArgument {
+    case int16 = "int16"
+    case int32 = "int32"
+    case int64 = "int64"
+    case float = "float"
+    case float64 = "float64"
 }
