@@ -30,6 +30,8 @@ import ArgumentParser
     @Option(help: "Varibale type to convert from.") var from_type: NetCDF_Values = .float
     @Option(help: "Varibale type to convert to.") var to_type: NetCDF_Values = .float
     
+    @Option(help: "Varibale type to drop.") var drop: [String] = []
+    
     var files: [URL] {
         get throws {
             let data = try FileHandle.standardInput.readToEnd()
@@ -50,8 +52,8 @@ extension NCX_Tool {
         let file = FileIO(urls: inputFile, date: date)
         if dump { try await file.dump() }
         else if gdump { try await file.gplot(name: var_name) }
-        else if convert_type { await file.change_variable(name: var_name, format_is: from_type, format_to: to_type) }
-    }
+        else if !drop.isEmpty { try file.drop(var_names: drop) }
+     }
 }
 
 enum NetCDF_Values: String, Codable, ExpressibleByArgument {

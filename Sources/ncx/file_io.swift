@@ -21,6 +21,7 @@ class FileIO {
     var urls:  [URL]
     var date: Date
     
+    // MARK: Print a table of the file content
     func dump() async throws {
         for url in urls {
             
@@ -117,7 +118,6 @@ class FileIO {
             // first and last timestamp
             print()
             print("[ File ]", url.lastPathComponent)
-            print()
             print("[ Time ] begin:", firstTimestamp)
             print("[ Time ] end:  ", lastTimestamp)
             print("[ Time ] stepsize: ", timeSteps)
@@ -178,7 +178,7 @@ class FileIO {
         return "-"
     }
     
-    func table_of_content(_ data: [[String]], tableHeader: String...)  {
+    internal func table_of_content(_ data: [[String]], tableHeader: String...)  {
         // create table header counts
         var counts: [Int] = tableHeader.map { header -> Int in
             return header.count
@@ -226,6 +226,7 @@ class FileIO {
         }
     }
     
+    // MARK: Graphic plot
     func gplot(name: String) async throws {
         for url in urls {
             let file = try NetCDF.open(path: url.path, allowUpdate: false)
@@ -241,7 +242,7 @@ class FileIO {
         }
     }
     
-    func plot(values data: [Double]) async {
+    internal func plot(values data: [Double]) async {
         
         let height: Int = 24//20
         let width:  Int = 100//90
@@ -282,12 +283,12 @@ class FileIO {
         
     }
     
-    func date(_ number: Double) -> String {
+    internal func date(_ number: Double) -> String {
         let date = Date(timeInterval: number, since: date)
         return date.getDateFormattedBy("dd.MM.yyyy HH:mm:ss")
     }
     
-    func interpolate(width: Int, data: [Double]) -> [Double] {
+    internal func interpolate(width: Int, data: [Double]) -> [Double] {
         let step_size: Int = Int(width / data.count)
         var new: [Double] = []
         for n in data {
@@ -296,205 +297,94 @@ class FileIO {
         return new
     }
     
-    func merge() {
-        // xyz? howww????
-        // whyyy?
-    }
-    
-    
-    // open old NetCDF read var and write it to new NetCDF
-    func change_variable(name: String, format_is: NetCDF_Values, format_to: NetCDF_Values) async {
-        // check if there are two files
+    func drop(var_names: [String]) throws {
+        print(urls)
+        print(var_names)
         if urls.count != 2 { print("missing input or output file."); exit(1) }
-        // check that format differs
-        if format_is == format_to { print("output format must differ from input format."); exit(1) }
-        do {
-            let file: Group? = try NetCDF.open(path: urls[0].path, allowUpdate: false)
-            if let variable = file?.getVariable(name: name) {
-                // read data
-                switch format_is {
-                    case .int16:
-                        if let values: [Int16] = try variable.asType(Int16.self)?.read() {
-                            switch format_to {
-                                case .int16: break
-                                case .int32:
-                                    let new_values: [Int32] = values.map({ Int32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values, from: urls[0],to: urls[1])
-                                case .int64:
-                                    let new_values: [Int64] = values.map({ Int64($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values, from: urls[0],to: urls[1])
-                                case .float:
-                                    let new_values: [Float32] = values.map({ Float32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0],to: urls[1])
-                                case .float64:
-                                    let new_values: [Float64] = values.map({ Float64($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0],to: urls[1])
-                            }
-                        }
-                    case .int32:
-                        if let values: [Int32] = try variable.asType(Int32.self)?.read() {
-                            switch format_to {
-                                case .int16:
-                                    let new_values: [Int16] = values.map({ Int16($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values,from: urls[0],to: urls[1])
-                                case .int32: break
-                                case .int64:
-                                    let new_values: [Int64] = values.map({ Int64($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values,  from: urls[0],to: urls[1])
-                                case .float:
-                                    let new_values: [Float32] = values.map({ Float32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0], to: urls[1])
-                                case .float64:
-                                    let new_values: [Float64] = values.map({ Float64($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0], to: urls[1])
-                            }
-                        }
-                    case .int64:
-                        print("read as int64")
-                        if let values: [Int64] = try variable.asType(Int64.self)?.read() {
-                            switch format_to {
-                                case .int16:
-                                    let new_values: [Int16] = values.map({ Int16($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values, from: urls[0], to: urls[1])
-                                case .int32:
-                                    let new_values: [Int32] = values.map({ Int32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values, from: urls[0],to: urls[1])
-                                case .int64: break
-                                case .float:
-                                    let new_values: [Float32] = values.map({ Float32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0],to: urls[1])
-                                case .float64:
-                                    let new_values: [Float64] = values.map({ Float64($0) - 1.5 })
-                                    print("convert to f64")
-                                    try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0], to: urls[1])
-                            }
-                        }
-                    case .float:
-                        if let values: [Float32] = try variable.asType(Float.self)?.read() {
-                            switch format_to {
-                                case .int16:
-                                    let new_values: [Int16] = values.map({ Int16($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values, from: urls[0],to: urls[1])
-                                case .int32:
-                                    let new_values: [Int32] = values.map({ Int32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values,from: urls[0], to: urls[1])
-                                case .int64:
-                                    let new_values: [Int64] = values.map({ Int64($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values, from: urls[0], to: urls[1])
-                                case .float: break
-                                case .float64:
-                                    let new_values: [Float64] = values.map({ Float64($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0], to: urls[1])
-                            }
-                        }
-                    case .float64:
-                        if let values: [Float64] = try variable.asType(Double.self)?.read() {
-                            switch format_to {
-                                case .int16:
-                                    let new_values: [Int16] = values.map({ Int16($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values, from: urls[0], to: urls[1])
-                                case .int32:
-                                    let new_values: [Int32] = values.map({ Int32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values, from: urls[0],to: urls[1])
-                                case .int64:
-                                    let new_values: [Int64] = values.map({ Int64($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values, from: urls[0], to: urls[1])
-                                case .float:
-                                    let new_values: [Float32] = values.map({ Float32($0) })
-                                    try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0], to: urls[1])
-                                case .float64: break
-                            }
-                        }
-                }
-            }
-            else { print("no variable named: \(name) found."); exit(1) }
-        }
-        catch { print("[ ERROR ] ", error); exit(1) }
+        let file = try NetCDF.open(path: urls[0].path, allowUpdate: false)
+        try copy_file(from: file!, to: urls[1], exclude: var_names)
     }
     
-    func copyFile<T: NetcdfConvertible>(file: Group?, var_name: String, type: T.Type, data: [T], from: URL, to: URL) async throws {
+    // MARK: Copy File
+    internal func copy_file(from: Group, to: URL, exclude: [String]) throws {
         var new_file = try NetCDF.create(path: to.path, overwriteExisting: true)
-        print("write...")
-        // copy dimensions
-        try copy_group(copyFrom: file!, to: &new_file, exclude: var_name)
+        try copy_group(copyFrom: from, to: &new_file, exclude: exclude)
     }
-    
-    internal func copy_group(copyFrom file: Group, to new_file: inout Group, exclude: String) throws {
+
+    internal func copy_group(copyFrom file: Group, to new_file: inout Group, exclude: [String]) throws {
         // copy dimensions
         for n in file.getDimensions() {
             _ = try new_file.createDimension(name: n.name, length: n.length, isUnlimited: n.isUnlimited)
         }
         
-        for n in file.getVariables() where n.name != exclude {
-            print(n.name)
+        for n in file.getVariables() where !exclude.contains(where: { n.name == $0 })  {
             switch n.type.asExternalDataType() {
                 case .none: print("[ ERROR ] invalid data type for \(n.name).")
                 case .some(.float):
                     var vari = try new_file.createVariable(name: n.name, type: Float.self, dimensions: n.dimensions)
-                    try copy_attributes(n: n, vari: &vari, t: Float.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: Float.self)
                     try vari.write((n.asType(Float.self)?.read())!)
                 case .some(.byte):
                     var vari = try new_file.createVariable(name: n.name, type: Int8.self, dimensions: n.dimensions)
                     try vari.write((n.asType(Int8.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: Int8.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: Int8.self)
                 case .some(.char):
                     var vari = try new_file.createVariable(name: n.name, type: Int8.self, dimensions: n.dimensions)
                     try vari.write((n.asType(Int8.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: Int8.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: Int8.self)
                 case .some(.short):
                     var vari = try new_file.createVariable(name: n.name, type: Int16.self, dimensions: n.dimensions)
                     try vari.write((n.asType(Int16.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: Int16.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: Int16.self)
                 case .some(.int32):
                     var vari = try new_file.createVariable(name: n.name, type: Int32.self, dimensions: n.dimensions)
                     try vari.write((n.asType(Int32.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: Int32.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: Int32.self)
                 case .some(.double):
-                    print("double")
                     var vari = try new_file.createVariable(name: n.name, type: Float64.self, dimensions: n.dimensions)
-                    print("created")
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: Float64.self)
                     try vari.write((n.asType(Float64.self)?.read())!)
-                    print("written")
-                    try copy_attributes(n: n, vari: &vari, t: Float64.self)
                 case .some(.ubyte):
                     var vari = try new_file.createVariable(name: n.name, type: UInt8.self, dimensions: n.dimensions)
                     try vari.write((n.asType(UInt8.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: UInt8.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: UInt8.self)
                 case .some(.ushort):
                     var vari = try new_file.createVariable(name: n.name, type: UInt16.self, dimensions: n.dimensions)
                     try vari.write((n.asType(UInt16.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: UInt16.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: UInt16.self)
                 case .some(.uint32):
                     var vari = try new_file.createVariable(name: n.name, type: UInt32.self, dimensions: n.dimensions)
                     try vari.write((n.asType(UInt32.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: UInt32.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: UInt32.self)
                 case .some(.int64):
                     var vari = try new_file.createVariable(name: n.name, type: Int64.self, dimensions: n.dimensions)
                     try vari.write((n.asType(Int64.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: Int64.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: Int64.self)
                 case .some(.uint64):
                     var vari = try new_file.createVariable(name: n.name, type: UInt64.self, dimensions: n.dimensions)
                     try vari.write((n.asType(UInt64.self)?.read())!)
-                    try copy_attributes(n: n, vari: &vari, t: UInt64.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: UInt64.self)
                 case .some(.string):
-                    print("str")
                     var vari = try new_file.createVariable(name: n.name, type: String.self, dimensions: n.dimensions)
-                    try copy_attributes(n: n, vari: &vari, t: String.self)
+                    try copy_attributes_for_variable(n: n, vari: &vari, t: String.self)
                     try vari.write((n.asType(String.self)?.read())!)
             }
         }
+
+        try copy_attributes_for_group(n: file, vari: &new_file)
         
-        //        for n in file.getGroups() {
-        //            let group = try file.createGroup(name: n.name)
-        //
-        //            try copy_group(copyFrom: n.group, to: group, exclude: "")
-        //        }
-        
+        for n in file.getGroups() {
+            var group = try file.createGroup(name: n.name)
+            for c in n.getDimensions() {
+                _ = try group.createDimension(name: c.name, length: c.length, isUnlimited: c.isUnlimited)
+            }
+            try copy_group(copyFrom: n.group, to: &group, exclude: exclude)
+            try copy_attributes_for_group(n: file, vari: &new_file)
+        }
     }
-    
-    internal func copy_attributes<T: NetcdfConvertible>(n: Variable, vari: inout VariableGeneric<T>, t: T.Type) throws {
+
+    internal func copy_attributes_for_variable<T: NetcdfConvertible>(n: Variable, vari: inout VariableGeneric<T>, t: T.Type) throws {
         for p in try n.getAttributes() {
-            print(p.name, p.type.asExternalDataType())
             switch p.type.asExternalDataType() {
                 case .none: print("[ ERROR ] while reading data from attribute of \(vari.variable.name)")
                 case .some(.float):
@@ -504,8 +394,11 @@ class FileIO {
                     let x: [Int8] = try p.read()!
                     try vari.setAttribute(p.name, x)
                 case .some(.char):
-                    let x: [CChar] = try p.read() ?? []
-                    try vari.setAttribute(p.name, x)
+    //                    let x: [CChar] = try p.read() ?? []
+    //                    try vari.setAttribute(p.name, x)
+                    let x: [UInt8] = try p.read() ?? []
+                    let res = String(data: Data(x), encoding: .utf8) ?? "error while copying attribute"
+                    try vari.setAttribute(p.name, res)
                 case .some(.short):
                     let x: [Int16] = try p.read()!
                     try vari.setAttribute(p.name, x)
@@ -531,12 +424,174 @@ class FileIO {
                     let x: [UInt64] = try p.read()!
                     try vari.setAttribute(p.name, x)
                 case .some(.string):
-                    let x: String = try p.read()!
+                    let x: [String] = try p.read()!
                     try vari.setAttribute(p.name, x)
             }
         }
     }
+
+    internal func copy_attributes_for_group(n: Group, vari: inout Group) throws {
+        for p in try n.getAttributes() {
+            switch p.type.asExternalDataType() {
+                case .none: print("[ ERROR ] while reading data from attribute of \(vari.name)")
+                case .some(.float):
+                    let x: [Float] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.byte):
+                    let x: [Int8] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.char):
+                    let x: [UInt8] = try p.read() ?? []
+                    let res = String(data: Data(x), encoding: .utf8) ?? "error while copying attribute"
+                    try vari.setAttribute(p.name, res)
+                case .some(.short):
+                    let x: [Int16] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.int32):
+                    let x: [Int32] = try p.read() ?? []
+                    try vari.setAttribute(p.name, x)
+                case .some(.double):
+                    let x: [Double] = try p.read() ?? []
+                    try vari.setAttribute(p.name, x)
+                case .some(.ubyte):
+                    let x: [UInt8] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.ushort):
+                    let x: [UInt8] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.uint32):
+                    let x: [UInt32] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.int64):
+                    let x: [Int64] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.uint64):
+                    let x: [UInt64] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+                case .some(.string):
+                    let x: [String] = try p.read()!
+                    try vari.setAttribute(p.name, x)
+            }
+        }
+    }
+
 }
 
 
  
+/*
+ // open old NetCDF read var and write it to new NetCDF
+ func change_variable(name: String, format_is: NetCDF_Values, format_to: NetCDF_Values) async {
+     // check if there are two files
+     if urls.count != 2 { print("missing input or output file."); exit(1) }
+     // check that format differs
+     if format_is == format_to { print("output format must differ from input format."); exit(1) }
+     do {
+         let file: Group? = try NetCDF.open(path: urls[0].path, allowUpdate: false)
+         if let variable = file?.getVariable(name: name) {
+             // read data
+             switch format_is {
+                 case .int16:
+                     if let values: [Int16] = try variable.asType(Int16.self)?.read() {
+                         switch format_to {
+                             case .int16: break
+                             case .int32:
+                                 let new_values: [Int32] = values.map({ Int32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values, from: urls[0],to: urls[1])
+                             case .int64:
+                                 let new_values: [Int64] = values.map({ Int64($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values, from: urls[0],to: urls[1])
+                             case .float:
+                                 let new_values: [Float32] = values.map({ Float32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0],to: urls[1])
+                             case .float64:
+                                 let new_values: [Float64] = values.map({ Float64($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0],to: urls[1])
+                         }
+                     }
+                 case .int32:
+                     if let values: [Int32] = try variable.asType(Int32.self)?.read() {
+                         switch format_to {
+                             case .int16:
+                                 let new_values: [Int16] = values.map({ Int16($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values,from: urls[0],to: urls[1])
+                             case .int32: break
+                             case .int64:
+                                 let new_values: [Int64] = values.map({ Int64($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values,  from: urls[0],to: urls[1])
+                             case .float:
+                                 let new_values: [Float32] = values.map({ Float32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0], to: urls[1])
+                             case .float64:
+                                 let new_values: [Float64] = values.map({ Float64($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0], to: urls[1])
+                         }
+                     }
+                 case .int64:
+                     print("read as int64")
+                     if let values: [Int64] = try variable.asType(Int64.self)?.read() {
+                         switch format_to {
+                             case .int16:
+                                 let new_values: [Int16] = values.map({ Int16($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values, from: urls[0], to: urls[1])
+                             case .int32:
+                                 let new_values: [Int32] = values.map({ Int32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values, from: urls[0],to: urls[1])
+                             case .int64: break
+                             case .float:
+                                 let new_values: [Float32] = values.map({ Float32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0],to: urls[1])
+                             case .float64:
+                                 let new_values: [Float64] = values.map({ Float64($0) - 1.5 })
+                                 print("convert to f64")
+                                 try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0], to: urls[1])
+                         }
+                     }
+                 case .float:
+                     if let values: [Float32] = try variable.asType(Float.self)?.read() {
+                         switch format_to {
+                             case .int16:
+                                 let new_values: [Int16] = values.map({ Int16($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values, from: urls[0],to: urls[1])
+                             case .int32:
+                                 let new_values: [Int32] = values.map({ Int32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values,from: urls[0], to: urls[1])
+                             case .int64:
+                                 let new_values: [Int64] = values.map({ Int64($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values, from: urls[0], to: urls[1])
+                             case .float: break
+                             case .float64:
+                                 let new_values: [Float64] = values.map({ Float64($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Float64.self, data: new_values, from: urls[0], to: urls[1])
+                         }
+                     }
+                 case .float64:
+                     if let values: [Float64] = try variable.asType(Double.self)?.read() {
+                         switch format_to {
+                             case .int16:
+                                 let new_values: [Int16] = values.map({ Int16($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int16.self, data: new_values, from: urls[0], to: urls[1])
+                             case .int32:
+                                 let new_values: [Int32] = values.map({ Int32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int32.self, data: new_values, from: urls[0],to: urls[1])
+                             case .int64:
+                                 let new_values: [Int64] = values.map({ Int64($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Int64.self, data: new_values, from: urls[0], to: urls[1])
+                             case .float:
+                                 let new_values: [Float32] = values.map({ Float32($0) })
+                                 try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0], to: urls[1])
+                             case .float64: break
+                         }
+                     }
+             }
+         }
+         else { print("no variable named: \(name) found."); exit(1) }
+     }
+     catch { print("\n\n"); print("[ ERROR ] ", error); exit(1) }
+ }
+ 
+ func copyFile<T: NetcdfConvertible>(file: Group?, var_name: String, type: T.Type, data: [T], from: URL, to: URL) async throws {
+     print("write...")
+     try copy_file(from: file!, to: to, exclude: [])
+ }
+ */
