@@ -20,6 +20,8 @@ import ArgumentParser
     @Flag() var dump: Bool = false
     @Flag() var gdump: Bool = false
     @Flag() var convert_type: Bool = false
+    @Flag(name: .shortAndLong, help: "force") var force: Bool = false
+
 
     @Option(help: "Reference date. Timeinterval [sec] since <date>.",
             transform: { $0.toDate(format: "yyyy-MM-dd'T'HH:mm:ssZ") ?? .init(timeIntervalSince1970: 0) }   )
@@ -52,7 +54,7 @@ extension NCX_Tool {
         let file = FileIO(urls: inputFile, date: date)
         if dump { try await file.dump() }
         else if gdump { try await file.gplot(name: var_name) }
-        else if !drop.isEmpty { try file.drop(var_names: drop) }
+        else if !drop.isEmpty { try file.drop(var_names: drop, force: force) }
      }
 }
 
