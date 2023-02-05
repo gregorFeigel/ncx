@@ -10,7 +10,7 @@
 
 import Foundation
 import SwiftNetCDF
- 
+
 class FileIO {
     
     init(urls: [URL], date: Date) {
@@ -26,7 +26,7 @@ class FileIO {
             
             let file = try NetCDF.open(path: url.path, allowUpdate: false)
             var container: [[String]] = []
-
+            
             let variables: [String] = file?.getVariables().compactMap { v in
                 return v.name
             } ?? []
@@ -34,7 +34,7 @@ class FileIO {
             var firstTimestamp: String = "-"
             var lastTimestamp: String = "-"
             var timeSteps: String = "-"
-
+            
             // list all varaibles and their count
             for (i,n) in variables.enumerated() {
                 let variable = file!.getVariable(name: n)
@@ -84,36 +84,36 @@ class FileIO {
                     // get error count
                     container[i][5] = String(nanCount)
                 }
-
+                
                 if n == "time", let vari = variable?.asType(Int64.self) {
                     let content = try vari.read().compactMap({ Int64($0) })
                     timeSteps = String(content[1] - content[0])
                     if let first = content.first, let last = content.last {
-                         firstTimestamp = date(Double(first))
-                         lastTimestamp = date(Double(last))
+                        firstTimestamp = date(Double(first))
+                        lastTimestamp = date(Double(last))
                     }
                 }
                 else if n == "time", let vari = variable?.asType(Float.self) {
                     let content = try vari.read().compactMap({ Int64($0) })
                     timeSteps = String(content[1] - content[0])
-                     if let first = content.first, let last = content.last {
-                         firstTimestamp = date(Double(first))
-                         lastTimestamp = date(Double(last))
+                    if let first = content.first, let last = content.last {
+                        firstTimestamp = date(Double(first))
+                        lastTimestamp = date(Double(last))
                     }
                 }
                 else if n == "time", let vari = variable?.asType(Double.self) {
                     let content = try vari.read().compactMap({ Int64($0) })
                     timeSteps = String(content[1] - content[0])
-                     if let first = content.first, let last = content.last {
-                         firstTimestamp = date(Double(first))
-                         lastTimestamp = date(Double(last))
+                    if let first = content.first, let last = content.last {
+                        firstTimestamp = date(Double(first))
+                        lastTimestamp = date(Double(last))
                     }
                 }
-             }
+            }
             
             // first and last timestamp
             print()
-            print("[File]", url.lastPathComponent)
+            print("[ File ]", url.lastPathComponent)
             print()
             print("[ Time ] begin:", firstTimestamp)
             print("[ Time ] end:  ", lastTimestamp)
@@ -129,7 +129,7 @@ class FileIO {
             print()
             table_of_content(container, tableHeader: "Values", "Count", "Average", "Min", "Max" ,"NaN & Err")
         }
-
+        
     }
     
     func table_of_content(_ data: [[String]], tableHeader: String...)  {
@@ -161,7 +161,7 @@ class FileIO {
             if i != tableHeader.count - 1 {  print("-|-", terminator: "") }
         }
         print("\n", terminator: "")
-
+        
         // table content
         for n in data {
             for (ii, x) in n.enumerated() {
@@ -171,8 +171,8 @@ class FileIO {
             }
             print("\n", terminator: "")
         }
-
-         func spacing(index: Int, value: String, spacer: String) {
+        
+        func spacing(index: Int, value: String, spacer: String) {
             let valueSpacer = (counts[index]) - value.count
             if valueSpacer > 0 {
                 for _ in 1...valueSpacer {  print(spacer, terminator: "") }
@@ -186,9 +186,11 @@ class FileIO {
             let variable = file?.getVariable(name: name)
             if let vari = variable?.asType(Double.self) {
                 let content = try vari.read().compactMap({ $0.isNaN ? nil : $0 })
-                 print()
-                 await plot(values: content)
-                 print()
+                print()
+                print("[ File ]", url.lastPathComponent)
+                print()
+                await plot(values: content)
+                print()
             }
         }
     }
@@ -355,7 +357,7 @@ class FileIO {
                                     let new_values: [Float32] = values.map({ Float32($0) })
                                     try await copyFile(file: file!, var_name: name, type: Float32.self, data: new_values, from: urls[0], to: urls[1])
                                 case .float64: break
-                             }
+                            }
                         }
                 }
             }
@@ -378,7 +380,7 @@ class FileIO {
         }
         
         for n in file.getVariables() where n.name != exclude {
-             print(n.name)
+            print(n.name)
             switch n.type.asExternalDataType() {
                 case .none: print("[ ERROR ] invalid data type for \(n.name).")
                 case .some(.float):
@@ -434,13 +436,13 @@ class FileIO {
                     try copy_attributes(n: n, vari: &vari, t: String.self)
                     try vari.write((n.asType(String.self)?.read())!)
             }
-         }
+        }
         
-//        for n in file.getGroups() {
-//            let group = try file.createGroup(name: n.name)
-//
-//            try copy_group(copyFrom: n.group, to: group, exclude: "")
-//        }
+        //        for n in file.getGroups() {
+        //            let group = try file.createGroup(name: n.name)
+        //
+        //            try copy_group(copyFrom: n.group, to: group, exclude: "")
+        //        }
         
     }
     
