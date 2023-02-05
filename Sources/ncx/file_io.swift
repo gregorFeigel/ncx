@@ -38,9 +38,12 @@ class FileIO {
             // list all varaibles and their count
             for (i,n) in variables.enumerated() {
                 let variable = file!.getVariable(name: n)
-                container.append([n, "-", "-", "-", "-", "-"])
+                let var_type: String = get_variable_type(vari: variable!) + " "
+                            //    name            unit count avg min  max  err
+                container.append([(var_type + n), "-", "-", "-", "-", "-", "-"])
                 // get variable
-                if let count = variable?.count { container[i][1] = String(count) }
+                if let count = variable?.count { container[i][2] = String(count) }
+                container[i][1] = try get_variable_unit(vari: variable!)
                 
                 if let contet = variable?.asType(Double.self) {
                     var nanCount: Int = 0
@@ -54,14 +57,14 @@ class FileIO {
                         }
                         else { nanCount += 1; return nil }
                     })
-                    container[i][2] = String(format: "%.3f", (sum.reduce(0, +) / Double(sum.count)))
+                    container[i][3] = String(format: "%.3f", (sum.reduce(0, +) / Double(sum.count)))
                     
                     // get min and max
-                    container[i][3] = String(sum.min() ?? -9999)
-                    container[i][4] = String(sum.max() ?? -9999)
+                    container[i][4] = String(sum.min() ?? -9999)
+                    container[i][5] = String(sum.max() ?? -9999)
                     
                     // get error count
-                    container[i][5] = String(nanCount)
+                    container[i][6] = String(nanCount)
                 }
                 else if let contet = variable?.asType(Float.self) {
                     var nanCount: Int = 0
@@ -75,14 +78,14 @@ class FileIO {
                         }
                         else { nanCount += 1; return nil }
                     })
-                    container[i][2] = String(format: "%.3f", (sum.reduce(0, +) / Float(sum.count)))
+                    container[i][3] = String(format: "%.3f", (sum.reduce(0, +) / Float(sum.count)))
                     
                     // get min and max
-                    container[i][3] = String(sum.min() ?? -9999)
-                    container[i][4] = String(sum.max() ?? -9999)
+                    container[i][4] = String(sum.min() ?? -9999)
+                    container[i][5] = String(sum.max() ?? -9999)
                     
                     // get error count
-                    container[i][5] = String(nanCount)
+                    container[i][6] = String(nanCount)
                 }
                 
                 if n == "time", let vari = variable?.asType(Int64.self) {
@@ -127,9 +130,52 @@ class FileIO {
             }
             
             print()
-            table_of_content(container, tableHeader: "Values", "Count", "Average", "Min", "Max" ,"NaN & Err")
+            table_of_content(container, tableHeader: "Values", "Unit", "Count", "Average", "Min", "Max" ,"NaN & Err")
         }
         
+    }
+    
+    internal func get_variable_type(vari: Variable) -> String {
+        switch vari.type.asExternalDataType() {
+            case .none:          return "(---)"
+            case .some(.float):  return "(f32)"
+            case .some(.byte):   return "(byte)"
+            case .some(.char):   return "(char)"
+            case .some(.short):  return "(i16)"
+            case .some(.int32):  return "(i32)"
+            case .some(.double): return "(f64)"
+            case .some(.ubyte):  return "(ubyt)"
+            case .some(.ushort): return "(ui16)"
+            case .some(.uint32): return "(ui32)"
+            case .some(.int64):  return "(i64)"
+            case .some(.uint64): return "(ui64)"
+            case .some(.string): return "(str)"
+        }
+    }
+    
+    internal func get_variable_unit(vari: Variable) throws -> String {
+        for n in try vari.getAttributes() where n.name == "units" {
+            switch n.type.asExternalDataType() {
+                case .none:         break
+                case .some(.float): break
+                case .some(.byte):  break
+                case .some(.char):
+                    var x: [UInt8] = try n.read() ?? []
+                    return String(data: Data(x), encoding: .utf8) ?? "err"
+                case .some(.short):  break
+                case .some(.int32):  break
+                case .some(.double): break
+                case .some(.ubyte):  break
+                case .some(.ushort): break
+                case .some(.uint32): break
+                case .some(.int64):  break
+                case .some(.uint64): break
+                case .some(.string):
+                    let x: [String] = try n.read() ?? []
+                    return x.joined(separator: "; ")
+            }
+        }
+        return "-"
     }
     
     func table_of_content(_ data: [[String]], tableHeader: String...)  {
@@ -446,7 +492,6 @@ class FileIO {
         
     }
     
-    
     internal func copy_attributes<T: NetcdfConvertible>(n: Variable, vari: inout VariableGeneric<T>, t: T.Type) throws {
         for p in try n.getAttributes() {
             print(p.name, p.type.asExternalDataType())
@@ -493,3 +538,5 @@ class FileIO {
     }
 }
 
+
+ 
