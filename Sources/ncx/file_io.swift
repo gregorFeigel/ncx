@@ -11,7 +11,7 @@
 import Foundation
 import SwiftNetCDF
 
-class FileIO {
+ class FileIO {
     
     init(urls: [URL], date: Date) {
         self.urls = urls
@@ -51,13 +51,14 @@ class FileIO {
                     let content: [Double] = try contet.read()
                     
                     // get average
-                    let sum = content.compactMap({ b in
+                    let _sum: [Double?] = content.compactMap({ b in
                         if !b.isNaN {
-                            if b < -9999.000 { nanCount += 1 }
+                            if b <= -9999.000 { nanCount += 1; return nil  }
                             return b
                         }
                         else { nanCount += 1; return nil }
                     })
+                    let sum: [Double] = _sum.compactMap({ $0 })
                     container[i][3] = String(format: "%.3f", (sum.reduce(0, +) / Double(sum.count)))
                     
                     // get min and max
@@ -72,13 +73,14 @@ class FileIO {
                     let content: [Float] = try contet.read()
                     
                     // get average
-                    let sum = content.compactMap({ b in
+                    let _sum: [Float?] = content.compactMap({ b in
                         if !b.isNaN {
-                            if b < -9999.000 { nanCount += 1 }
+                            if b <= -9999.000 { nanCount += 1; return nil }
                             return b
                         }
                         else { nanCount += 1; return nil }
                     })
+                    let sum: [Float] = _sum.compactMap({ $0 })
                     container[i][3] = String(format: "%.3f", (sum.reduce(0, +) / Float(sum.count)))
                     
                     // get min and max
@@ -232,11 +234,31 @@ class FileIO {
             let file = try NetCDF.open(path: url.path, allowUpdate: false)
             let variable = file?.getVariable(name: name)
             if let vari = variable?.asType(Double.self) {
-                let content = try vari.read().compactMap({ $0.isNaN ? nil : $0 })
+                let content: [Double] = try vari.read().compactMap({ n in
+                    switch n {
+                        case .nan: return nil
+                        case -9999.000: return nil
+                        default: return n
+                    }
+                })
                 print()
                 print("[ File ]", url.lastPathComponent)
                 print()
                 await plot(values: content)
+                print()
+            }
+            if let vari = variable?.asType(Float.self) {
+                let content: [Float] = try vari.read().compactMap({ n in
+                    switch n {
+                        case .nan: return nil
+                        case -9999.000: return nil
+                        default: return n
+                    }
+                })
+                print()
+                print("[ File ]", url.lastPathComponent)
+                print()
+                await plot(values: content.map({ Double($0) }))
                 print()
             }
         }
